@@ -457,6 +457,152 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
         }
         break;
 
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_LEFT:
+            if (Hero)
+            {
+                Hero->dir = dirs::left;
+                dll::ATOM Dummy(Hero->x - (1.0f + game_speed), Hero->y, Hero->GetWidth(), Hero->GetHeight());
+                if (ActiveScreen.Island1.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island1.ex || Dummy.ex <= ActiveScreen.Island1.x
+                        || Dummy.y >= ActiveScreen.Island1.ey || Dummy.ey <= ActiveScreen.Island1.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island2.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island2.ex || Dummy.ex <= ActiveScreen.Island2.x
+                        || Dummy.y >= ActiveScreen.Island2.ey || Dummy.ey <= ActiveScreen.Island2.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island3.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island3.ex || Dummy.ex <= ActiveScreen.Island3.x
+                        || Dummy.y >= ActiveScreen.Island3.ey || Dummy.ey <= ActiveScreen.Island3.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+            }
+            break;
+
+        case VK_RIGHT:
+            if (Hero)
+            {
+                Hero->dir = dirs::right;
+                dll::ATOM Dummy(Hero->x + (1.0f + game_speed), Hero->y, Hero->GetWidth(), Hero->GetHeight());
+                if (ActiveScreen.Island1.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island1.ex || Dummy.ex <= ActiveScreen.Island1.x
+                        || Dummy.y >= ActiveScreen.Island1.ey || Dummy.ey <= ActiveScreen.Island1.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island2.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island2.ex || Dummy.ex <= ActiveScreen.Island2.x
+                        || Dummy.y >= ActiveScreen.Island2.ey || Dummy.ey <= ActiveScreen.Island2.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island3.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island3.ex || Dummy.ex <= ActiveScreen.Island3.x
+                        || Dummy.y >= ActiveScreen.Island3.ey || Dummy.ey <= ActiveScreen.Island3.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+            }
+            break;
+
+        case VK_UP:
+            if (Hero)
+            {
+                Hero->dir = dirs::up;
+                dll::ATOM Dummy(Hero->x, Hero->y - (1.0f + game_speed), Hero->GetWidth(), Hero->GetHeight());
+                if (ActiveScreen.Island1.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island1.ex || Dummy.ex <= ActiveScreen.Island1.x
+                        || Dummy.y >= ActiveScreen.Island1.ey || Dummy.ey <= ActiveScreen.Island1.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island2.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island2.ex || Dummy.ex <= ActiveScreen.Island2.x
+                        || Dummy.y >= ActiveScreen.Island2.ey || Dummy.ey <= ActiveScreen.Island2.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island3.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island3.ex || Dummy.ex <= ActiveScreen.Island3.x
+                        || Dummy.y >= ActiveScreen.Island3.ey || Dummy.ey <= ActiveScreen.Island3.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+            }
+            break;
+
+        case VK_DOWN:
+            if (Hero)
+            {
+                Hero->dir = dirs::down;
+                dll::ATOM Dummy(Hero->x, Hero->y + (1.0f + game_speed), Hero->GetWidth(), Hero->GetHeight());
+                if (ActiveScreen.Island1.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island1.ex || Dummy.ex <= ActiveScreen.Island1.x
+                        || Dummy.y >= ActiveScreen.Island1.ey || Dummy.ey <= ActiveScreen.Island1.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island2.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island2.ex || Dummy.ex <= ActiveScreen.Island2.x
+                        || Dummy.y >= ActiveScreen.Island2.ey || Dummy.ey <= ActiveScreen.Island2.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island3.x >= 0)
+                {
+                    if (!(Dummy.x >= ActiveScreen.Island3.ex || Dummy.ex <= ActiveScreen.Island3.x
+                        || Dummy.y >= ActiveScreen.Island3.ey || Dummy.ey <= ActiveScreen.Island3.y))
+                    {
+                        Hero->dir = dirs::stop;
+                        break;
+                    }
+                }
+            }
+            break;
+        }
+        break;
+
+
 
     default: return DefWindowProc(hwnd, ReceivedMsg, wParam, lParam);
     }
@@ -893,6 +1039,93 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
         /////////////////////////////////////////////////
 
+        //GAME ENGINE *************************************************
+
+        //MY SHIP **********************
+
+        if (Hero)
+        {
+            if (Hero->dir != dirs::stop)
+                if (Hero->Move((float)(game_speed)) == D_FAIL)
+                {
+                    int posibility = -1;
+                    
+                    switch(Hero->dir)
+                    {
+                    case dirs::right:
+                        if (ActiveScreen.right > -1)
+                        {
+                            posibility = ActiveScreen.right;
+                            ActiveScreen = AllGameScreens[posibility];
+                            Hero->x = 10.0f;
+                            Hero->SetEdges();
+                        }
+                        break;
+
+                    case dirs::left:
+                        if (ActiveScreen.left > -1)
+                        {
+                            posibility = ActiveScreen.left;
+                            ActiveScreen = AllGameScreens[posibility];
+                            Hero->x = scr_width - 10.0f;
+                            Hero->SetEdges();
+                        }
+                        break;
+
+                    case dirs::up:
+                        if (ActiveScreen.up > -1)
+                        {
+                            posibility = ActiveScreen.up;
+                            ActiveScreen = AllGameScreens[posibility];
+                            Hero->y = scr_height - 10.0f;
+                            Hero->SetEdges();
+                        
+                        }
+                        break;
+
+                    case dirs::down:
+                        if (ActiveScreen.down > -1)
+                        {
+                            posibility = ActiveScreen.down;
+                            ActiveScreen = AllGameScreens[posibility];
+                            Hero->y = 60.0f;
+                            Hero->SetEdges();
+                        }
+                        break;
+                    }
+
+                    Hero->dir = dirs::stop;
+                }
+           if (Hero)
+            {
+                if (ActiveScreen.Island1.x >= 0)
+                {
+                    if (!(Hero->x >= ActiveScreen.Island1.ex || Hero->ex <= ActiveScreen.Island1.x
+                        || Hero->y >= ActiveScreen.Island1.ey || Hero->ey <= ActiveScreen.Island1.y))
+                        Hero->dir = dirs::stop;
+                }
+                if (ActiveScreen.Island2.x >= 0)
+                {
+                    if (!(Hero->x >= ActiveScreen.Island2.ex || Hero->ex <= ActiveScreen.Island2.x
+                        || Hero->y >= ActiveScreen.Island2.ey || Hero->ey <= ActiveScreen.Island2.y))
+                        Hero->dir = dirs::stop;
+                     
+                }
+                if (ActiveScreen.Island3.x >= 0)
+                {
+                    if (!(Hero->x >= ActiveScreen.Island3.ex || Hero->ex <= ActiveScreen.Island3.x
+                        || Hero->y >= ActiveScreen.Island3.ey || Hero->ey <= ActiveScreen.Island3.y))
+                        Hero->dir = dirs::stop;
+                }
+            }
+        }
+
+        ////////////////////////////////
+
+
+
+
+
 
 
 
@@ -951,31 +1184,31 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             {
             case dirs::stop:
                 if (Hero->x > scr_width / 2)
-                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
-                else
                     Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
+                else
+                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
 
             case dirs::up:
                 if (Hero->x > scr_width / 2)
-                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
-                else
                     Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
+                else
+                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
 
             case dirs::down:
                 if (Hero->x > scr_width / 2)
-                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
-                else
                     Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
+                else
+                    Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
 
             case dirs::right:
-                Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
+                Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
 
             case dirs::left:
-                Draw->DrawBitmap(bmpHeroL[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
+                Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
             }
         }

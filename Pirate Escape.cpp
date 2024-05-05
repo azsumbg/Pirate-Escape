@@ -83,11 +83,21 @@ int score = 0;
 
 /////////////////////////////////////////////////
 
+struct SHOTDATA
+{
+    dll::BOULDER Shot;
+    move::DATA Path;
+    dirs dir = dirs::stop;
+};
+move::DATA MyShotData;
+dirs MyShotDir = dirs::stop;
+
+
 dll::obj_ptr Hero = nullptr;
 std::vector<dll::obj_ptr> vPirates;
 
-std::vector<dll::Boulder>vMyBoulders;
-std::vector<dll::Boulder>vEvilBoulders;
+std::vector<SHOTDATA>vMyBoulders;
+std::vector<SHOTDATA>vEvilBoulders;
 
 dll::SCREENDATA ActiveScreen;
 dll::SCREENDATA AllGameScreens[8];
@@ -217,18 +227,8 @@ void InitGame()
         }
     vPirates.clear();
 
-    if (!vMyBoulders.empty())
-    {
-        for (std::vector<dll::Boulder>::iterator it = vMyBoulders.begin(); it < vMyBoulders.end(); it++)
-            delete (*it);
-    }
     vMyBoulders.clear();
 
-    if (!vEvilBoulders.empty())
-    {
-        for (std::vector<dll::Boulder>::iterator it = vEvilBoulders.begin(); it < vEvilBoulders.end(); it++)
-            delete (*it);
-    }
     vEvilBoulders.clear();
 
     ////////////////////////////////////////////////////
@@ -601,6 +601,19 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
             break;
         }
         break;
+
+        case WM_LBUTTONDOWN:
+            if (Hero)
+            {
+                if (!Hero->now_shooting)
+                {
+                    Hero->Shoot();
+                    MyShotData = move::Init(Hero->x + 70.0f, Hero->y + 70.0f, LOWORD(lParam), HIWORD(lParam));
+                    if (Hero->x <= LOWORD(lParam))MyShotDir = dirs::right;
+                    else MyShotDir = dirs::left;
+                }
+            }
+            break;
 
 
 
@@ -1118,11 +1131,59 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         Hero->dir = dirs::stop;
                 }
             }
+        
+           if (Hero->now_shooting)
+           {
+               int shot_engaged = Hero->Shoot();
+               if (shot_engaged > 0)
+               {
+                   dll::ATOM bDims(Hero->x + 70.0f, Hero->y + 70.0f, 30.0f, 30.0f);
+                   dll::BOULDER bBoulder(bDims, shot_engaged);
+                   vMyBoulders.push_back(SHOTDATA(bBoulder, MyShotData, MyShotDir));
+               }
+           }
         }
 
         ////////////////////////////////
 
+        //MY SHOTS ***********************
 
+        if (!vMyBoulders.empty())
+        {
+            for (std::vector<SHOTDATA>::iterator it = vMyBoulders.begin(); it < vMyBoulders.end(); it++)
+            {
+                switch (it->dir)
+                {
+                case dirs::left:
+                {
+                    float nexty = move::NextY(it->Shot.Dims.x -= game_speed * 1.5, MyShotData);
+                    it->Shot.Dims.x -= game_speed * 1.5;
+                    it->Shot.Dims.y = nexty;
+                    it->Shot.Dims.SetEdges();
+                    it->Shot.range--;
+                }
+                    break;
+
+                case dirs::right:
+                {
+                    float nexty = move::NextY(it->Shot.Dims.x += game_speed * 1.5, MyShotData);
+                    it->Shot.Dims.x += game_speed * 1.5;
+                    it->Shot.Dims.y = nexty;
+                    it->Shot.Dims.SetEdges();
+                    it->Shot.range--;
+                }
+                break;
+
+                }
+
+                if (it->Shot.range < 0)
+                {
+                    vMyBoulders.erase(it);
+                    break;
+                }
+
+            }
+        }
 
 
 
@@ -1213,7 +1274,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
-
+        if (!vMyBoulders.empty())
+        {
+            for (int i = 0; i < vMyBoulders.size(); i++)
+                Draw->DrawBitmap(bmpBall, D2D1::RectF(vMyBoulders[i].Shot.Dims.x, vMyBoulders[i].Shot.Dims.y,
+                    vMyBoulders[i].Shot.Dims.ex, vMyBoulders[i].Shot.Dims.ey));
+        }
 
 
 

@@ -97,6 +97,7 @@ namespace dll
 	public:
 		types type = types::no_type;
 		int lifes = 0;
+		bool now_shooting = false;
 
 
 		FACTORY(types _what_type, float _x, float _y) :ATOM(_x, _y, 150.0f, 143.0f) //HERO by default;

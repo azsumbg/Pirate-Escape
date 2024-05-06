@@ -93,6 +93,11 @@ struct SHOTDATA
     move::DATA Path;
     dirs dir = dirs::stop;
 };
+struct EXPLOSION
+{
+    dll::ATOM Dims;
+    int frame;
+};
 
 move::DATA MyShotData;
 dirs MyShotDir = dirs::stop;
@@ -110,6 +115,8 @@ dll::SCREENDATA ActiveScreen;
 dll::SCREENDATA AllGameScreens[8];
 
 int current_field_frame = 0;
+
+std::vector<EXPLOSION> vExplosions;
 
 ///////////////////////////////////////////////
 
@@ -238,6 +245,7 @@ void InitGame()
 
     vEvilBoulders.clear();
 
+    vExplosions.clear();
     ////////////////////////////////////////////////////
 
     dll::InitScreenData(AllGameScreens);
@@ -1241,10 +1249,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         island1_hts--;
                         if (island1_hts <= 0)
                         {
+                            if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+                            dll::ATOM anExplosion(ActiveScreen.Island1.x, ActiveScreen.Island1.y, 200.0f, 227.0f);
+                            vExplosions.push_back(EXPLOSION(anExplosion, -1));
                             ActiveScreen.Island1.x = -1;
                             ActiveScreen.Island1.y = -1;
                             ActiveScreen.Island1.ex = -1;
                             ActiveScreen.Island1.ey = -1;
+
                         }
                         break;
                     }
@@ -1258,6 +1270,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         island2_hts--;
                         if (island2_hts <= 0)
                         {
+                            if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+                            dll::ATOM anExplosion(ActiveScreen.Island2.x, ActiveScreen.Island2.y, 200.0f, 227.0f);
+                            vExplosions.push_back(EXPLOSION(anExplosion, -1));
                             ActiveScreen.Island2.x = -1;
                             ActiveScreen.Island2.y = -1;
                             ActiveScreen.Island2.ex = -1;
@@ -1275,6 +1290,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         island3_hts--;
                         if (island3_hts <= 0)
                         {
+                            if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+                            dll::ATOM anExplosion(ActiveScreen.Island3.x, ActiveScreen.Island3.y, 200.0f, 227.0f);
+                            vExplosions.push_back(EXPLOSION(anExplosion, -1));
                             ActiveScreen.Island3.x = -1;
                             ActiveScreen.Island3.y = -1;
                             ActiveScreen.Island3.ex = -1;
@@ -1499,6 +1517,38 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     vMyBoulders[i].Shot.Dims.ex, vMyBoulders[i].Shot.Dims.ey));
         }
 
+        if (!vMyBoulders.empty() && !vPirates.empty())
+        {
+            for (std::vector<dll::obj_ptr>::iterator pirate = vPirates.begin(); pirate < vPirates.end(); pirate++)
+            {
+                bool killed = false;
+
+                for (std::vector<SHOTDATA>::iterator shot = vMyBoulders.begin(); shot < vMyBoulders.end(); shot++)
+                {
+                    if (!((*pirate)->x > shot->Shot.Dims.ex || (*pirate)->ex < shot->Shot.Dims.x ||
+                        (*pirate)->y>shot->Shot.Dims.ey || (*pirate)->ey < shot->Shot.Dims.y))
+                    {
+                        (*pirate)->lifes -= 30;
+                        vMyBoulders.erase(shot);
+
+                        if ((*pirate)->lifes <= 0)
+                        {
+                            score += game_speed * 20;
+                            dll::ATOM anExplosion((*pirate)->x, (*pirate)->y, 200.0f, 227.0f);
+                            if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+                            vExplosions.push_back(EXPLOSION(anExplosion, -1));
+                            (*pirate)->Release();
+                            vPirates.erase(pirate);
+                            killed = true;
+                        }
+                        break;
+                    }
+                }
+
+                if (killed)break;
+            }
+        }
+
 
         //PIRATES *****************************************
 
@@ -1714,11 +1764,26 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 Draw->DrawBitmap(bmpBall, D2D1::RectF(vEvilBoulders[i].Shot.Dims.x, vEvilBoulders[i].Shot.Dims.y,
                     vEvilBoulders[i].Shot.Dims.ex, vEvilBoulders[i].Shot.Dims.ey));
         }
+        //////////////////////////////////////////////////
 
+        //EXPLOSIONS *************************************
+
+        if (!vExplosions.empty())
+        {
+            for (std::vector<EXPLOSION>::iterator it = vExplosions.begin(); it < vExplosions.end(); it++)
+            {
+                it->frame++;
+                if (it->frame > 23)
+                {
+                    vExplosions.erase(it);
+                    break;
+                }
+                Draw->DrawBitmap(bmpExplosion[it->frame], D2D1::RectF(it->Dims.x, it->Dims.y, it->Dims.ex, it->Dims.ey));
+            }
+        }
 
         ////////////////////////////////////////////////////
         Draw->EndDraw();
-
     }
 
     ClearRes();

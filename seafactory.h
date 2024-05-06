@@ -118,7 +118,7 @@ namespace dll
 				frame_delay = 10;
 				max_frames = 2;
 				turn_delay = 80;
-				shoot_delay = 90;
+				shoot_delay = 290;
 				speed = 1.2f;
 				range = 120;
 				lifes = 180;
@@ -129,7 +129,7 @@ namespace dll
 				frame_delay = 8;
 				max_frames = 4;
 				turn_delay = 90;
-				shoot_delay = 100;
+				shoot_delay = 300;
 				speed = 1.0f;
 				range = 130;
 				lifes = 120;
@@ -140,7 +140,7 @@ namespace dll
 				frame_delay = 3;
 				max_frames = 9;
 				turn_delay = 110;
-				shoot_delay = 120;
+				shoot_delay = 320;
 				speed = 0.8f;
 				range = 130;
 				lifes = 180;

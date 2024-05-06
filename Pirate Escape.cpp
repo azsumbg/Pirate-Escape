@@ -1083,6 +1083,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             island1_hts = 5;
                             island2_hts = 5;
                             island3_hts = 5;
+                            if (!vPirates.empty())
+                            {
+                                for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+                                    (*it)->Release();
+                                vPirates.clear();
+                            }
                         }
                         break;
 
@@ -1096,6 +1102,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             island1_hts = 5;
                             island2_hts = 5;
                             island3_hts = 5;
+                            if (!vPirates.empty())
+                            {
+                                for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+                                    (*it)->Release();
+                                vPirates.clear();
+                            }
                         }
                         break;
 
@@ -1109,6 +1121,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             island1_hts = 5;
                             island2_hts = 5;
                             island3_hts = 5;
+                            if (!vPirates.empty())
+                            {
+                                for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+                                    (*it)->Release();
+                                vPirates.clear();
+                            }
                         }
                         break;
 
@@ -1122,6 +1140,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             island1_hts = 5;
                             island2_hts = 5;
                             island3_hts = 5;
+                            if (!vPirates.empty())
+                            {
+                                for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+                                    (*it)->Release();
+                                vPirates.clear();
+                            }
                         }
                         break;
                     }
@@ -1318,6 +1342,71 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             
         }
 
+        //ENEMY SHOTS ********************
+
+        if (!vPirates.empty() && Hero)
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
+                if (abs((*it)->x - Hero->x) <= 150 || abs((*it)->y - Hero->y) <= 150)
+                {
+                    if (!((*it)->now_shooting))
+                    {
+                        (*it)->Shoot();
+                        EnemyShotData = move::Init((*it)->x + 70.0f, (*it)->y + 70.0f, Hero->x, Hero->y);
+                        if (Hero->x >= (*it)->x)EnemyShotDir = dirs::right;
+                        else EnemyShotDir = dirs::left;
+                    }
+                    else
+                    {
+                        int shot_engaged = (*it)->Shoot();
+                        if (shot_engaged > 0)
+                        {
+                            dll::ATOM bDims((*it)->x + 70.0f, (*it)->y + 70.0f, 30.0f, 30.0f);
+                            dll::BOULDER bBoulder(bDims, shot_engaged);
+                            vEvilBoulders.push_back(SHOTDATA(bBoulder, EnemyShotData, EnemyShotDir));
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!vEvilBoulders.empty())
+        {
+            for (std::vector<SHOTDATA>::iterator it = vEvilBoulders.begin(); it < vEvilBoulders.end(); it++)
+            {
+                switch (it->dir)
+                {
+                case dirs::left:
+                {
+                    float nexty = move::NextY(it->Shot.Dims.x -= game_speed * 1.5f, EnemyShotData);
+                    it->Shot.Dims.x -= game_speed * 1.5f;
+                    it->Shot.Dims.y = nexty;
+                    it->Shot.Dims.SetEdges();
+                    it->Shot.range--;
+                }
+                break;
+
+                case dirs::right:
+                {
+                    float nexty = move::NextY(it->Shot.Dims.x += game_speed * 1.5f, EnemyShotData);
+                    it->Shot.Dims.x += game_speed * 1.5f;
+                    it->Shot.Dims.y = nexty;
+                    it->Shot.Dims.SetEdges();
+                    it->Shot.range--;
+                }
+                break;
+
+                }
+
+                if (it->Shot.range < 0)
+                {
+                    vEvilBoulders.erase(it);
+                    break;
+                }
+
+            }
+        }
 
         //DRAW THINGS *************************************
         Draw->BeginDraw();
@@ -1619,6 +1708,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
+        if (!vEvilBoulders.empty())
+        {
+            for (int i = 0; i < vEvilBoulders.size(); i++)
+                Draw->DrawBitmap(bmpBall, D2D1::RectF(vEvilBoulders[i].Shot.Dims.x, vEvilBoulders[i].Shot.Dims.y,
+                    vEvilBoulders[i].Shot.Dims.ex, vEvilBoulders[i].Shot.Dims.ey));
+        }
 
 
         ////////////////////////////////////////////////////

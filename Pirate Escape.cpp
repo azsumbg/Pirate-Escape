@@ -93,9 +93,12 @@ struct SHOTDATA
     move::DATA Path;
     dirs dir = dirs::stop;
 };
+
 move::DATA MyShotData;
 dirs MyShotDir = dirs::stop;
 
+move::DATA EnemyShotData;
+dirs EnemyShotDir = dirs::stop;
 
 dll::obj_ptr Hero = nullptr;
 std::vector<dll::obj_ptr> vPirates;
@@ -603,11 +606,14 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
                 }
             }
             break;
+
+        case VK_SPACE:
+            if (Hero)Hero->dir = dirs::stop;
         }
         break;
 
-        case WM_LBUTTONDOWN:
-            if (Hero)
+    case WM_LBUTTONDOWN:
+         if (Hero)
             {
                 if (!Hero->now_shooting)
                 {
@@ -617,9 +623,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
                     else MyShotDir = dirs::left;
                 }
             }
-            break;
-
-
+         break;
 
     default: return DefWindowProc(hwnd, ReceivedMsg, wParam, lParam);
     }
@@ -1258,7 +1262,61 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
+        //////////////////////////////////
 
+        //ENEMIES ***********************
+
+        if (vPirates.size() < 2 && rand() % 300 == 66)
+        {
+            int first_dir = rand() % 4;
+            int pirate_type = rand() % 3;
+
+            switch (first_dir)
+            {
+            case 0:
+                if (pirate_type == 0)vPirates.push_back(dll::iFactory(types::bad1, scr_width,
+                    static_cast<float>(rand() % 600 + 60), dirs::left));
+                else if (pirate_type == 1)vPirates.push_back(dll::iFactory(types::bad2, scr_width,
+                    static_cast<float>(rand() % 600 + 60), dirs::left));
+                else vPirates.push_back(dll::iFactory(types::bad3, scr_width,
+                    static_cast<float>(rand() % 600 + 60), dirs::left));
+                break;
+
+            case 1:
+                if (pirate_type == 0)vPirates.push_back(dll::iFactory(types::bad1, -100.0f,
+                    static_cast<float>(rand() % 600 + 60), dirs::right));
+                else if (pirate_type == 1)vPirates.push_back(dll::iFactory(types::bad2, -100.0f,
+                    static_cast<float>(rand() % 600 + 60), dirs::right));
+                else vPirates.push_back(dll::iFactory(types::bad3, -100.0f,
+                    static_cast<float>(rand() % 600 + 60), dirs::right));
+                break;
+
+            case 2:
+                if (pirate_type == 0)vPirates.push_back(dll::iFactory(types::bad1, static_cast<float>(rand() % 800),
+                    scr_height, dirs::up));
+                else if (pirate_type == 1)vPirates.push_back(dll::iFactory(types::bad2, static_cast<float>(rand() % 800),
+                    scr_height, dirs::up));
+                else vPirates.push_back(dll::iFactory(types::bad3, static_cast<float>(rand() % 800),
+                    scr_height, dirs::up));
+                break;
+
+            case 3:
+                if (pirate_type == 0)vPirates.push_back(dll::iFactory(types::bad1, static_cast<float>(rand() % 800),
+                    -100.0f, dirs::down));
+                else if (pirate_type == 1)vPirates.push_back(dll::iFactory(types::bad2, static_cast<float>(rand() % 800),
+                    -100.0f, dirs::down));
+                else vPirates.push_back(dll::iFactory(types::bad3, static_cast<float>(rand() % 800),
+                    -100.0f, dirs::down));
+                break;
+            }
+        }
+
+        if (!vPirates.empty())
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+                (*it)->Move((float)(game_speed));
+            
+        }
 
 
         //DRAW THINGS *************************************
@@ -1353,9 +1411,213 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         }
 
 
+        //PIRATES *****************************************
 
+        if (!vPirates.empty())
+        {
+            for(std::vector<dll::obj_ptr>::iterator it=vPirates.begin();it<vPirates.end();it++)
+                switch ((*it)->type)
+                {
+                case types::bad1:
+                    if ((*it)->dir == dirs::left)
+                        Draw->DrawBitmap(bmpBad1R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else if ((*it)->dir == dirs::right)
+                        Draw->DrawBitmap(bmpBad1L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else
+                    {
+                        if ((*it)->x > scr_width / 2)
+                            Draw->DrawBitmap(bmpBad1R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                        else
+                            Draw->DrawBitmap(bmpBad1L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    }
+                    break;
 
+                case types::bad2:
+                    if ((*it)->dir == dirs::left)
+                        Draw->DrawBitmap(bmpBad2R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else if ((*it)->dir == dirs::right)
+                        Draw->DrawBitmap(bmpBad2L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else
+                    {
+                        if ((*it)->x > scr_width / 2)
+                            Draw->DrawBitmap(bmpBad2R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                        else
+                            Draw->DrawBitmap(bmpBad2L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    }
+                    break;
 
+                case types::bad3:
+                    if ((*it)->dir == dirs::left)
+                        Draw->DrawBitmap(bmpBad3R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else if ((*it)->dir == dirs::right)
+                        Draw->DrawBitmap(bmpBad3L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    else
+                    {
+                        if ((*it)->x > scr_width / 2)
+                            Draw->DrawBitmap(bmpBad3R[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                        else
+                            Draw->DrawBitmap(bmpBad3L[(*it)->GetFrame()], D2D1::RectF((*it)->x, (*it)->y, (*it)->ex, (*it)->ey));
+                    }
+                    break;
+                }
+        }
+
+        if (!vPirates.empty() && ActiveScreen.Island1.x > -1)
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
+                if (!((*it)->x > ActiveScreen.Island1.ex || (*it)->ex<ActiveScreen.Island1.x ||
+                    (*it)->y>ActiveScreen.Island1.ey || (*it)->ey < ActiveScreen.Island1.y))
+                {
+                    int new_dir = rand() % 3;
+                    switch ((*it)->dir)
+                    {
+                    case dirs::left:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::right:
+                        if (new_dir == 0)(*it)->dir = dirs::left;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::up:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::left;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::down:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::up;
+                        break;
+
+                    }
+                    break;
+                }
+            }
+        }
+        if (!vPirates.empty() && ActiveScreen.Island2.x > -1)
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
+                if (!((*it)->x > ActiveScreen.Island2.ex || (*it)->ex<ActiveScreen.Island2.x ||
+                    (*it)->y>ActiveScreen.Island2.ey || (*it)->ey < ActiveScreen.Island2.y))
+                {
+                    int new_dir = rand() % 3;
+                    switch ((*it)->dir)
+                    {
+                    case dirs::left:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::right:
+                        if (new_dir == 0)(*it)->dir = dirs::left;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::up:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::left;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::down:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::up;
+                        break;
+
+                    }
+                    break;
+                }
+            }
+        }
+        if (!vPirates.empty() && ActiveScreen.Island3.x > -1)
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
+                if (!((*it)->x > ActiveScreen.Island3.ex || (*it)->ex<ActiveScreen.Island3.x ||
+                    (*it)->y>ActiveScreen.Island3.ey || (*it)->ey < ActiveScreen.Island3.y))
+                {
+                    int new_dir = rand() % 3;
+                    switch ((*it)->dir)
+                    {
+                    case dirs::left:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::right:
+                        if (new_dir == 0)(*it)->dir = dirs::left;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::up:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::left;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::down:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::up;
+                        break;
+
+                    }
+                    break;
+                }
+            }
+        }
+        if (!vPirates.empty() && ActiveScreen.FinalIsland.x > -1)
+        {
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
+                if (!((*it)->x > ActiveScreen.FinalIsland.ex || (*it)->ex<ActiveScreen.FinalIsland.x ||
+                    (*it)->y>ActiveScreen.FinalIsland.ey || (*it)->ey < ActiveScreen.FinalIsland.y))
+                {
+                    int new_dir = rand() % 3;
+                    switch ((*it)->dir)
+                    {
+                    case dirs::left:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::right:
+                        if (new_dir == 0)(*it)->dir = dirs::left;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::up:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::left;
+                        else (*it)->dir = dirs::down;
+                        break;
+
+                    case dirs::down:
+                        if (new_dir == 0)(*it)->dir = dirs::right;
+                        else if (new_dir == 1)(*it)->dir = dirs::up;
+                        else (*it)->dir = dirs::up;
+                        break;
+
+                    }
+                    break;
+                }
+            }
+        }
 
 
 

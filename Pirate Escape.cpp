@@ -81,6 +81,10 @@ int seconds = 0;
 int minutes = 0;
 int score = 0;
 
+int island1_hts = 5;
+int island2_hts = 5;
+int island3_hts = 5;
+
 /////////////////////////////////////////////////
 
 struct SHOTDATA
@@ -1072,6 +1076,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->x = 10.0f;
                             Hero->SetEdges();
+                            island1_hts = 5;
+                            island2_hts = 5;
+                            island3_hts = 5;
                         }
                         break;
 
@@ -1082,6 +1089,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->x = scr_width - 10.0f;
                             Hero->SetEdges();
+                            island1_hts = 5;
+                            island2_hts = 5;
+                            island3_hts = 5;
                         }
                         break;
 
@@ -1092,7 +1102,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->y = scr_height - 10.0f;
                             Hero->SetEdges();
-                        
+                            island1_hts = 5;
+                            island2_hts = 5;
+                            island3_hts = 5;
                         }
                         break;
 
@@ -1103,6 +1115,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->y = 60.0f;
                             Hero->SetEdges();
+                            island1_hts = 5;
+                            island2_hts = 5;
+                            island3_hts = 5;
                         }
                         break;
                     }
@@ -1156,8 +1171,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 {
                 case dirs::left:
                 {
-                    float nexty = move::NextY(it->Shot.Dims.x -= game_speed * 1.5, MyShotData);
-                    it->Shot.Dims.x -= game_speed * 1.5;
+                    float nexty = move::NextY(it->Shot.Dims.x -= game_speed * 1.5f, MyShotData);
+                    it->Shot.Dims.x -= game_speed * 1.5f;
                     it->Shot.Dims.y = nexty;
                     it->Shot.Dims.SetEdges();
                     it->Shot.range--;
@@ -1166,8 +1181,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
                 case dirs::right:
                 {
-                    float nexty = move::NextY(it->Shot.Dims.x += game_speed * 1.5, MyShotData);
-                    it->Shot.Dims.x += game_speed * 1.5;
+                    float nexty = move::NextY(it->Shot.Dims.x += game_speed * 1.5f, MyShotData);
+                    it->Shot.Dims.x += game_speed * 1.5f;
                     it->Shot.Dims.y = nexty;
                     it->Shot.Dims.SetEdges();
                     it->Shot.range--;
@@ -1185,7 +1200,63 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             }
         }
 
-
+        if (!vMyBoulders.empty())
+        {
+            for (std::vector<SHOTDATA>::iterator it = vMyBoulders.begin(); it < vMyBoulders.end(); it++)
+            {
+                if (ActiveScreen.Island1.x > -1)
+                {
+                    if (!(ActiveScreen.Island1.x > it->Shot.Dims.ex || ActiveScreen.Island1.ex<it->Shot.Dims.x ||
+                        ActiveScreen.Island1.y>it->Shot.Dims.ey || ActiveScreen.Island1.ey < it->Shot.Dims.y))
+                    {
+                        vMyBoulders.erase(it);
+                        island1_hts--;
+                        if (island1_hts <= 0)
+                        {
+                            ActiveScreen.Island1.x = -1;
+                            ActiveScreen.Island1.y = -1;
+                            ActiveScreen.Island1.ex = -1;
+                            ActiveScreen.Island1.ey = -1;
+                        }
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island2.x > -1)
+                {
+                    if (!(ActiveScreen.Island2.x > it->Shot.Dims.ex || ActiveScreen.Island2.ex<it->Shot.Dims.x ||
+                        ActiveScreen.Island2.y>it->Shot.Dims.ey || ActiveScreen.Island2.ey < it->Shot.Dims.y))
+                    {
+                        vMyBoulders.erase(it);
+                        island2_hts--;
+                        if (island2_hts <= 0)
+                        {
+                            ActiveScreen.Island2.x = -1;
+                            ActiveScreen.Island2.y = -1;
+                            ActiveScreen.Island2.ex = -1;
+                            ActiveScreen.Island2.ey = -1;
+                        }
+                        break;
+                    }
+                }
+                if (ActiveScreen.Island3.x > -1)
+                {
+                    if (!(ActiveScreen.Island3.x > it->Shot.Dims.ex || ActiveScreen.Island3.ex<it->Shot.Dims.x ||
+                        ActiveScreen.Island3.y>it->Shot.Dims.ey || ActiveScreen.Island3.ey < it->Shot.Dims.y))
+                    {
+                        vMyBoulders.erase(it);
+                        island3_hts--;
+                        if (island3_hts <= 0)
+                        {
+                            ActiveScreen.Island3.x = -1;
+                            ActiveScreen.Island3.y = -1;
+                            ActiveScreen.Island3.ex = -1;
+                            ActiveScreen.Island3.ey = -1;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
 
 
 

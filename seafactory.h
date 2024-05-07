@@ -107,7 +107,7 @@ namespace dll
 			frame_delay = 5;
 			max_frames = 6;
 			turn_delay = 100;
-			shoot_delay = 100;
+			shoot_delay = 80;
 			range = 150;
 			lifes = 200;
 

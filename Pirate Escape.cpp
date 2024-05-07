@@ -65,6 +65,8 @@ bool b1Hglt = false;
 bool b2Hglt = false;
 bool b3Hglt = false;
 bool set_name = false;
+bool hero_killed = false;
+bool win_game = false;
 
 D2D1_RECT_F b1Rect = { 0, 0, 275.0f, 50.0f };
 D2D1_RECT_F b2Rect = { 375.0f, 0, 625.0f, 50.0f };
@@ -128,6 +130,10 @@ ID2D1SolidColorBrush* TxtBrush = nullptr;
 ID2D1SolidColorBrush* InactBrush = nullptr;
 ID2D1SolidColorBrush* HgltBrush = nullptr;
 
+ID2D1SolidColorBrush* GreenBrush = nullptr;
+ID2D1SolidColorBrush* YellowBrush = nullptr;
+ID2D1SolidColorBrush* RedBrush = nullptr;
+
 IDWriteFactory* iWriteFactory = nullptr;
 IDWriteTextFormat* nrmText = nullptr;
 IDWriteTextFormat* bigText = nullptr;
@@ -178,6 +184,10 @@ void ClearRes()
     Swipe(&TxtBrush);
     Swipe(&InactBrush);
     Swipe(&HgltBrush);
+    Swipe(&GreenBrush);
+    Swipe(&YellowBrush);
+    Swipe(&RedBrush);
+
     Swipe(&iWriteFactory);
     Swipe(&nrmText);
     Swipe(&middleText);
@@ -747,6 +757,30 @@ void CreateResources()
         ErrExit(eD2D);
     }
 
+    if (Draw)
+        hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Green), &GreenBrush);
+    if (hr != S_OK)
+    {
+        LogError(L"Error creating D2D1 GreenBrush");
+        ErrExit(eD2D);
+    }
+
+    if (Draw)
+        hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Yellow), &YellowBrush);
+    if (hr != S_OK)
+    {
+        LogError(L"Error creating D2D1 YellowBrush");
+        ErrExit(eD2D);
+    }
+
+    if (Draw)
+        hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Red), &RedBrush);
+    if (hr != S_OK)
+    {
+        LogError(L"Error creating D2D1 RedBrush");
+        ErrExit(eD2D);
+    }
+
     ///////////////////////////////////////////////////
 
     hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&iWriteFactory));
@@ -1181,6 +1215,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         || Hero->y >= ActiveScreen.Island3.ey || Hero->ey <= ActiveScreen.Island3.y))
                         Hero->dir = dirs::stop;
                 }
+                if (ActiveScreen.FinalIsland.x >= 0)
+                {
+                    if (!(Hero->x >= ActiveScreen.FinalIsland.ex || Hero->ex <= ActiveScreen.FinalIsland.x
+                        || Hero->y >= ActiveScreen.FinalIsland.ey || Hero->ey <= ActiveScreen.FinalIsland.y))
+                    {
+                        win_game = true;
+                        GameOver();
+                    }
+                }
+
             }
         
            if (Hero->now_shooting)
@@ -1414,7 +1458,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     it->Shot.range--;
                 }
                 break;
-
                 }
 
                 if (it->Shot.range < 0)
@@ -1424,6 +1467,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 }
 
             }
+        }
+
+        if (!vEvilBoulders.empty() && Hero)
+        {
+            for (std::vector<SHOTDATA>::iterator it = vEvilBoulders.begin(); it < vEvilBoulders.end(); it++)
+            {
+                if (!(Hero->x > it->Shot.Dims.ex || Hero->ex<it->Shot.Dims.x
+                    || Hero->y>it->Shot.Dims.ey || Hero->ey < it->Shot.Dims.y))
+                {
+                    Hero->lifes -= 30;
+                    if (Hero->lifes <= 0)
+                    {
+                        if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
+                        vExplosions.push_back(EXPLOSION(dll::ATOM(Hero->x, Hero->y, Hero->GetWidth(), Hero->GetHeight()), -1));
+                        hero_killed = true;
+                        Swipe(&Hero);
+                    }
+                    vEvilBoulders.erase(it);
+                    break;
+                }
+            }
+
         }
 
         //DRAW THINGS *************************************
@@ -1508,6 +1573,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 Draw->DrawBitmap(bmpHeroR[Hero->GetFrame()], D2D1::RectF(Hero->x, Hero->y, Hero->ex, Hero->ey));
                 break;
             }
+
+            if (GreenBrush && YellowBrush && RedBrush)
+            {
+                if (Hero->lifes > 80)Draw->DrawLine(D2D1::Point2F(Hero->x, Hero->ey + 10.0f),
+                    D2D1::Point2F(Hero->x + Hero->lifes / 1.5f, Hero->ey + 10.0f), GreenBrush, 10.0f);
+                else if(Hero->lifes>30)Draw->DrawLine(D2D1::Point2F(Hero->x, Hero->ey + 10.0f),
+                    D2D1::Point2F(Hero->x + Hero->lifes / 1.5f, Hero->ey + 10.0f), YellowBrush, 10.0f);
+                else Draw->DrawLine(D2D1::Point2F(Hero->x, Hero->ey + 10.0f),
+                    D2D1::Point2F(Hero->x + Hero->lifes / 1.5f, Hero->ey + 10.0f), RedBrush, 10.0f);
+            }
         }
 
         if (!vMyBoulders.empty())
@@ -1554,7 +1629,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
         if (!vPirates.empty())
         {
-            for(std::vector<dll::obj_ptr>::iterator it=vPirates.begin();it<vPirates.end();it++)
+            for (std::vector<dll::obj_ptr>::iterator it = vPirates.begin(); it < vPirates.end(); it++)
+            {
                 switch ((*it)->type)
                 {
                 case types::bad1:
@@ -1599,6 +1675,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     }
                     break;
                 }
+
+                if (GreenBrush && YellowBrush && RedBrush)
+                {
+                    if ((*it)->lifes > 80)Draw->DrawLine(D2D1::Point2F((*it)->x, (*it)->ey + 10.0f),
+                        D2D1::Point2F((*it)->x + (*it)->lifes / 1.5f, (*it)->ey + 10.0f), GreenBrush, 10.0f);
+                    else if ((*it)->lifes > 30)Draw->DrawLine(D2D1::Point2F((*it)->x, (*it)->ey + 10.0f),
+                        D2D1::Point2F((*it)->x + (*it)->lifes / 1.5f, (*it)->ey + 10.0f), YellowBrush, 10.0f);
+                    else Draw->DrawLine(D2D1::Point2F((*it)->x, (*it)->ey + 10.0f),
+                        D2D1::Point2F((*it)->x + (*it)->lifes / 1.5f, (*it)->ey + 10.0f), RedBrush, 10.0f);
+                }
+
+            }
         }
 
         if (!vPirates.empty() && ActiveScreen.Island1.x > -1)
@@ -1776,9 +1864,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 if (it->frame > 23)
                 {
                     vExplosions.erase(it);
+                    if (hero_killed)GameOver();
                     break;
                 }
                 Draw->DrawBitmap(bmpExplosion[it->frame], D2D1::RectF(it->Dims.x, it->Dims.y, it->Dims.ex, it->Dims.ey));
+                
             }
         }
 

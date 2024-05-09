@@ -328,7 +328,55 @@ void InitGame()
 
     Hero = dll::iFactory(types::hero, 50.0f, 75.0f, dirs::stop);
 
+}
+void HallOfFame()
+{
+    int result = 0;
+    CheckFile(record_file, &result);
+    if (result == FILE_NOT_EXIST)
+    {
+        if (sound)MessageBeep(MB_ICONASTERISK);
+        MessageBox(bHwnd, L"Все още няма записан рекорд на играта !\n\nПостарай се повече !",
+            L"Липсва файл !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+        return;
+    }
 
+    std::wifstream rec(record_file);
+    wchar_t saved_player[16] = L"\0";
+    wchar_t add[5] = L"\0";
+    wchar_t stat[150] = L"НАЙ-ЛЕГЕНДАРЕН КАПИТАН: ";
+
+    rec >> result;
+    wsprintf(add, L"%d", result);
+
+    for (int i = 0; i < 16; i++)
+    {
+        int letter = 0;
+        rec >> letter;
+        saved_player[i] = static_cast<wchar_t>(letter);
+        
+    }
+    rec.close();
+    wcscat_s(stat, saved_player);
+    wcscat_s(stat, L"\n\nСВЕТОВЕН РЕКОРД: ");
+    wcscat_s(stat, add);
+
+    result = 0;
+    for (int i = 0; i < 150; i++)
+    {
+        if (stat[i] != '\0')result++;
+        else break;
+    }
+
+    if (sound)mciSendString(L"play .\\res\\snd\\tada.wav", NULL, NULL, NULL);
+    if (middleText && HgltBrush)
+    {
+        Draw->BeginDraw();
+        Draw->Clear(D2D1::ColorF(D2D1::ColorF::DarkKhaki));
+        Draw->DrawTextW(stat, result, middleText, D2D1::RectF(300.0f, 300.0f, scr_width, scr_height), HgltBrush);
+        Draw->EndDraw();
+    }
+    Sleep(3000);
 }
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
@@ -544,6 +592,12 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
             break;
 
 
+        case mHoF:
+            pause = true;
+            HallOfFame();
+            pause = false;
+            break;
+
         }
         break;
 
@@ -706,6 +760,31 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
                     break;
                 }
                 if (sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+                if (DialogBox(bIns, MAKEINTRESOURCE(IDD_PLAYER), hwnd, &DlgProc) == IDOK)set_name = true;
+                break;
+            }
+            if (LOWORD(lParam) >= b2Rect.left && LOWORD(lParam) <= b2Rect.right)
+            {
+                mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+                if (sound)
+                {
+                    sound = false;
+                    PlaySound(NULL, NULL, NULL);
+                    break;
+                }
+                else
+                {
+                    sound = false;
+                    PlaySound(snd_file, NULL, SND_ASYNC | SND_LOOP);
+                    break;
+                }
+                break;
+            }
+            if (LOWORD(lParam) >= b3Rect.left && LOWORD(lParam) <= b3Rect.right)
+            {
+                mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+                
+                break;
             }
         }
          if (Hero)
@@ -828,7 +907,7 @@ void CreateResources()
     }
 
     if (Draw)
-        hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::DarkGray), &InactBrush);
+        hr = Draw->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::Chocolate), &InactBrush);
     if (hr != S_OK)
     {
         LogError(L"Error creating D2D1 TxtBrush");
@@ -1157,6 +1236,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     bIns = hInstance;
     if (!bIns)ErrExit(eClass);
     CreateResources();
+    PlaySound(snd_file, NULL, SND_ASYNC | SND_LOOP);
 
     while (bMsg.message != WM_QUIT)
     {

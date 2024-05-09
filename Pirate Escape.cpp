@@ -153,7 +153,7 @@ ID2D1Bitmap* bmpHeroR[7] = { nullptr };
 
 ID2D1Bitmap* bmpBad1L[3] = { nullptr };
 ID2D1Bitmap* bmpBad1R[3] = { nullptr };
-
+  
 ID2D1Bitmap* bmpBad2L[5] = { nullptr };
 ID2D1Bitmap* bmpBad2R[5] = { nullptr };
 
@@ -223,11 +223,76 @@ void ErrExit(int what)
     std::remove(tmp_file);
     exit(1);
 }
+BOOL CheckRecord()
+{
+    if (score < 1)return no_record;
 
+    int result = 0;
+    CheckFile(record_file, &result);
+    if (result == FILE_NOT_EXIST)
+    {
+        std::wofstream rec(record_file);
+        rec << score << std::endl;
+        for (int i = 0; i < 16; i++)rec << static_cast<int>(current_player[i]) << std::endl;
+        rec.close();
+        return first_record;
+    }
+
+    std::wifstream check(record_file);
+    check >> result;
+    check.close();
+
+    if (score > result)
+    {
+        std::wofstream rec(record_file);
+        rec << score << std::endl;
+        for (int i = 0; i < 16; i++)rec << static_cast<int>(current_player[i]) << std::endl;
+        rec.close();
+        return record;
+    }
+
+    return no_record;
+}
 void GameOver()
 {
     PlaySound(NULL, NULL, NULL);
     KillTimer(bHwnd, bTimer);
+    if (win_game)score += game_speed * 100;
+
+    wchar_t endtxt[50] = L"О, О, О ! ЗАГУБИ !";
+    int size = 0;
+
+    switch (CheckRecord())
+    {
+    case no_record:
+        if (sound)mciSendString(L"play .\\res\\snd\\loose.wav", NULL, NULL, NULL);
+        break;
+
+    case first_record:
+        wcscpy_s(endtxt, L"ПЪРВИ РЕКОРД НА ИГРАТА !");
+        if (sound)mciSendString(L"play .\\res\\snd\\record.wav", NULL, NULL, NULL);
+        break;
+
+    case record:
+        wcscpy_s(endtxt, L"НОВ СВЕТОВЕН РЕКОРД НА ИГРАТА !");
+        if (sound)mciSendString(L"play .\\res\\snd\\record.wav", NULL, NULL, NULL);
+        break;
+    }
+
+    for (int i = 0; i < 50; i++)
+    {
+        if (endtxt[i] != '\0')size++;
+        else break;
+    }
+
+    if (bigText && HgltBrush)
+    {
+        Draw->BeginDraw();
+        Draw->Clear(D2D1::ColorF(D2D1::ColorF::DarkKhaki));
+        Draw->DrawTextW(endtxt, size, bigText, D2D1::RectF(100.0f, scr_height / 2 - 50.0f, scr_width, scr_height), HgltBrush);
+        Draw->EndDraw();
+    }
+    Sleep(6500);
 
     bMsg.message = WM_QUIT;
     bMsg.wParam = 0;
@@ -631,10 +696,23 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
         break;
 
     case WM_LBUTTONDOWN:
+        if (HIWORD(lParam) <= 50)
+        {
+            if (LOWORD(lParam) >= b1Rect.left && LOWORD(lParam) <= b1Rect.right)
+            {
+                if (set_name)
+                {
+                    if (sound)mciSendString(L"play .\\res\\snd\\negative.wav", NULL, NULL, NULL);
+                    break;
+                }
+                if (sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+            }
+        }
          if (Hero)
             {
                 if (!Hero->now_shooting)
                 {
+                    if (sound)mciSendString(L"play .\\res\\snd\\cannon.wav", NULL, NULL, NULL);
                     Hero->Shoot();
                     MyShotData = move::Init(Hero->x + 70.0f, Hero->y + 70.0f, LOWORD(lParam), HIWORD(lParam));
                     if (Hero->x <= LOWORD(lParam))MyShotDir = dirs::right;
@@ -1033,14 +1111,14 @@ void CreateResources()
     ///////////////////////////////////////////////
     mciSendString(L"play .\\res\\snd\\intro.wav", NULL, NULL, NULL);
 
-    D2D1_RECT_F up_scr = { 20.0f,-20.0f,scr_width,130.0f };
+    D2D1_RECT_F up_scr = { 20.0f,-20.0f,500.0f,130.0f };
     D2D1_RECT_F down_scr = { scr_width - 150.0f, scr_height, scr_width + 300.0f,scr_height + 150.0f };
 
     bool all_set = false;
 
     while (!all_set)
     {
-        if (up_scr.right < 200.0f)
+        if (up_scr.right < 700.0f)
         {
             up_scr.left += 1.5f;
             up_scr.right += 1.5f;
@@ -1068,7 +1146,7 @@ void CreateResources()
             Draw->DrawTextW(L"dev. Daniel", 12, bigText, down_scr, HgltBrush);
         }
         Draw->EndDraw();
-        if (up_scr.right >= 200.f && up_scr.bottom >= scr_height / 2 && down_scr.left <= 550.f
+        if (up_scr.right >= 700.f && up_scr.bottom >= scr_height / 2 && down_scr.left <= 550.f
             && down_scr.top <= scr_height / 2 + 100.0f)all_set = true;
     }
     Sleep(1000);
@@ -1118,6 +1196,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     case dirs::right:
                         if (ActiveScreen.right > -1)
                         {
+                            score += 10 * game_speed;
                             posibility = ActiveScreen.right;
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->x = 10.0f;
@@ -1137,6 +1216,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     case dirs::left:
                         if (ActiveScreen.left > -1)
                         {
+                            score += 10 * game_speed;
                             posibility = ActiveScreen.left;
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->x = scr_width - 10.0f;
@@ -1156,6 +1236,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     case dirs::up:
                         if (ActiveScreen.up > -1)
                         {
+                            score += 10 * game_speed;
                             posibility = ActiveScreen.up;
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->y = scr_height - 10.0f;
@@ -1175,6 +1256,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     case dirs::down:
                         if (ActiveScreen.down > -1)
                         {
+                            score += 10 * game_speed;
                             posibility = ActiveScreen.down;
                             ActiveScreen = AllGameScreens[posibility];
                             Hero->y = 60.0f;
@@ -1221,6 +1303,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                         || Hero->y >= ActiveScreen.FinalIsland.ey || Hero->ey <= ActiveScreen.FinalIsland.y))
                     {
                         win_game = true;
+                        PlaySound(NULL, NULL, NULL);
+                        if(sound)PlaySound(L".\\res\\snd\\win.wav", NULL, SND_SYNC);
                         GameOver();
                     }
                 }
@@ -1273,6 +1357,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
                 if (it->Shot.range < 0)
                 {
+                    if (sound)mciSendString(L"play .\\res\\snd\\splash.wav", NULL, NULL, NULL);
                     vMyBoulders.erase(it);
                     break;
                 }
@@ -1289,6 +1374,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     if (!(ActiveScreen.Island1.x > it->Shot.Dims.ex || ActiveScreen.Island1.ex<it->Shot.Dims.x ||
                         ActiveScreen.Island1.y>it->Shot.Dims.ey || ActiveScreen.Island1.ey < it->Shot.Dims.y))
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\ground.wav", NULL, NULL, NULL);
                         vMyBoulders.erase(it);
                         island1_hts--;
                         if (island1_hts <= 0)
@@ -1310,6 +1396,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     if (!(ActiveScreen.Island2.x > it->Shot.Dims.ex || ActiveScreen.Island2.ex<it->Shot.Dims.x ||
                         ActiveScreen.Island2.y>it->Shot.Dims.ey || ActiveScreen.Island2.ey < it->Shot.Dims.y))
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\ground.wav", NULL, NULL, NULL);
                         vMyBoulders.erase(it);
                         island2_hts--;
                         if (island2_hts <= 0)
@@ -1330,6 +1417,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                     if (!(ActiveScreen.Island3.x > it->Shot.Dims.ex || ActiveScreen.Island3.ex<it->Shot.Dims.x ||
                         ActiveScreen.Island3.y>it->Shot.Dims.ey || ActiveScreen.Island3.ey < it->Shot.Dims.y))
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\ground.wav", NULL, NULL, NULL);
                         vMyBoulders.erase(it);
                         island3_hts--;
                         if (island3_hts <= 0)
@@ -1414,6 +1502,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 {
                     if (!((*it)->now_shooting))
                     {
+                        if (sound)mciSendString(L"play .\\res\\snd\\cannon.wav", NULL, NULL, NULL);
                         (*it)->Shoot();
                         EnemyShotData = move::Init((*it)->x + 70.0f, (*it)->y + 70.0f, Hero->x, Hero->y);
                         if (Hero->x >= (*it)->x)EnemyShotDir = dirs::right;
@@ -1462,6 +1551,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
                 if (it->Shot.range < 0)
                 {
+                    if (sound)mciSendString(L"play .\\res\\snd\\splash.wav", NULL, NULL, NULL);
                     vEvilBoulders.erase(it);
                     break;
                 }
@@ -1519,6 +1609,35 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         current_field_frame++;
         if (current_field_frame > 15)current_field_frame = 0;
         Draw->DrawBitmap(bmpField[current_field_frame], D2D1::RectF(0, 50.0f, scr_width, scr_height));
+
+        if (middleText && TxtBrush)
+        {
+            wchar_t status[150] = L"КАПИТАН: ";
+            wchar_t add[5] = L"\0";
+            int size = 0;
+
+            wcscat_s(status, current_player);
+
+            wsprintf(add, L"%d", game_speed);
+            wcscat_s(status, L", СКОРОСТ: ");
+            wcscat_s(status, add);
+
+            wsprintf(add, L"%d", ActiveScreen.number);
+            wcscat_s(status, L", КАРТА: ");
+            wcscat_s(status, add);
+
+            wsprintf(add, L"%d", score);
+            wcscat_s(status, L", РЕЗУЛТАТ: ");
+            wcscat_s(status, add);
+
+            for (int i = 0; i < 150; i++)
+            {
+                if (status[i] != '\0')size++;
+                else break;
+            }
+
+            Draw->DrawTextW(status, size, middleText, D2D1::RectF(20.0f, scr_height - 60.0f, scr_width, scr_height), TxtBrush);
+        }
 
         //ISLANDS *****************************************
 
@@ -1863,6 +1982,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 it->frame++;
                 if (it->frame > 23)
                 {
+                    Draw->EndDraw();
                     vExplosions.erase(it);
                     if (hero_killed)GameOver();
                     break;

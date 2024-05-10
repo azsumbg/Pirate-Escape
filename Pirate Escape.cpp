@@ -266,6 +266,7 @@ void GameOver()
     {
     case no_record:
         if (sound)mciSendString(L"play .\\res\\snd\\loose.wav", NULL, NULL, NULL);
+        if (win_game)wcscpy_s(endtxt, L"МИСИЯТА ИЗПЪЛНЕНА, НО БЕЗ РЕКОРД !");
         break;
 
     case first_record:
@@ -328,6 +329,7 @@ void InitGame()
 
     Hero = dll::iFactory(types::hero, 50.0f, 75.0f, dirs::stop);
 
+    
 }
 void HallOfFame()
 {
@@ -985,7 +987,7 @@ void CreateResources()
     }
 
     bmpFinal = Load(L".\\res\\img\\final.png", Draw);
-    if (!bmpBall)
+    if (!bmpFinal)
     {
         LogError(L"Error loading bmpFinal");
         ErrExit(eD2D);

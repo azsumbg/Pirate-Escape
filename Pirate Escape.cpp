@@ -79,7 +79,7 @@ D2D1_RECT_F b3TxtRect = { 750, 0, scr_width, 50.0f };
 wchar_t current_player[16] = L"A CAPTAIN";
 
 int game_speed = 1;
-int seconds = 0;
+int seconds = 300;
 int minutes = 0;
 int score = 0;
 
@@ -100,6 +100,11 @@ struct EXPLOSION
     dll::ATOM Dims;
     int frame;
 };
+struct SPARE
+{
+    dll::ATOM Dims;
+    int life = 10;
+};
 
 move::DATA MyShotData;
 dirs MyShotDir = dirs::stop;
@@ -119,6 +124,7 @@ dll::SCREENDATA AllGameScreens[8];
 int current_field_frame = 0;
 
 std::vector<EXPLOSION> vExplosions;
+std::vector<SPARE>vShipyards;
 
 ///////////////////////////////////////////////
 
@@ -144,6 +150,7 @@ ID2D1Bitmap* bmpFinal = nullptr;
 ID2D1Bitmap* bmpIsland1 = nullptr;
 ID2D1Bitmap* bmpIsland2 = nullptr;
 ID2D1Bitmap* bmpIsland3 = nullptr;
+ID2D1Bitmap* bmpShipyard = nullptr;
 
 ID2D1Bitmap* bmpField[16] = { nullptr };
 ID2D1Bitmap* bmpExplosion[24] = { nullptr };
@@ -198,6 +205,7 @@ void ClearRes()
     Swipe(&bmpIsland1);
     Swipe(&bmpIsland2);
     Swipe(&bmpIsland3);
+    Swipe(&bmpShipyard);
 
     for (int i = 0; i < 16; i++)Swipe(&bmpField[i]);
     for (int i = 0; i < 24; i++)Swipe(&bmpExplosion[i]);
@@ -301,7 +309,7 @@ void GameOver()
 void InitGame()
 {
     game_speed = 1;
-    seconds = 0;
+    seconds = 300;
     minutes = 0;
     score = 0;
 
@@ -322,6 +330,8 @@ void InitGame()
     vEvilBoulders.clear();
 
     vExplosions.clear();
+
+    vShipyards.clear();
     ////////////////////////////////////////////////////
 
     dll::InitScreenData(AllGameScreens);
@@ -379,6 +389,183 @@ void HallOfFame()
         Draw->EndDraw();
     }
     Sleep(3000);
+}
+void SaveGame()
+{
+    int result = 0;
+    CheckFile(save_file, &result);
+    if (result == FILE_EXIST)
+    {
+        if (sound)MessageBeep(MB_ICONEXCLAMATION);
+        if (MessageBox(bHwnd, L"Съществува предишна игра, която ще загубиш !\n\nНаистина ли да я презапиша !", L"Презапис !",
+            MB_YESNO | MB_APPLMODAL | MB_ICONQUESTION) == IDNO)return;
+    }
+
+    std::wofstream save(save_file);
+
+    save << score << std::endl;
+    save << seconds << std::endl;
+    save << game_speed << std::endl;
+    for (int i = 0; i < 16; i++)save << static_cast<int>(current_player[i]) << std::endl;
+    save << set_name << std::endl;
+    save << hero_killed << std::endl;
+    save << win_game << std::endl;
+    if (Hero)
+    {
+        save << Hero->x << std::endl;
+        save << Hero->y << std::endl;
+        save << Hero->lifes << std::endl;
+    }
+    save << vPirates.size() << std::endl;
+    if (!vPirates.empty())
+    {
+        for (int i = 0; i < vPirates.size(); i++)
+        {
+            save << static_cast<int>(vPirates[i]->type) << std::endl;
+            save << vPirates[i]->x << std::endl;
+            save << vPirates[i]->y << std::endl;
+            save << static_cast<int>(vPirates[i]->dir) << std::endl;
+            save << vPirates[i]->lifes << std::endl;
+        }
+    }
+
+    save << ActiveScreen.number << std::endl;
+    save << ActiveScreen.FinalIsland.x << std::endl;
+    save << ActiveScreen.FinalIsland.y << std::endl;
+    save << ActiveScreen.FinalIsland.ex << std::endl;
+    save << ActiveScreen.FinalIsland.ey << std::endl;
+
+    save << ActiveScreen.Island1.x << std::endl;
+    save << ActiveScreen.Island1.y << std::endl;
+    save << ActiveScreen.Island1.ex << std::endl;
+    save << ActiveScreen.Island1.ey << std::endl;
+    
+    save << ActiveScreen.Island2.x << std::endl;
+    save << ActiveScreen.Island2.y << std::endl;
+    save << ActiveScreen.Island2.ex << std::endl;
+    save << ActiveScreen.Island2.ey << std::endl;
+
+    save << ActiveScreen.Island3.x << std::endl;
+    save << ActiveScreen.Island3.y << std::endl;
+    save << ActiveScreen.Island3.ex << std::endl;
+    save << ActiveScreen.Island3.ey << std::endl;
+
+    save.close();
+    if (sound)mciSendString(L"play .\\res\\snd\\save.wav", NULL, NULL, NULL);
+    MessageBox(bHwnd, L"Играта е запазена !", L"Запис !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+}
+void LoadGame()
+{
+    int result = 0;
+    CheckFile(save_file, &result);
+    if (result == FILE_NOT_EXIST)
+    {
+        if (sound)MessageBeep(MB_ICONASTERISK);
+        MessageBox(bHwnd, L"Все още няма записана игра !\n\nПостарай се повече !",
+            L"Липсва файл !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+        return;
+    }
+    else
+    {
+        if (sound)MessageBeep(MB_ICONEXCLAMATION);
+        if (MessageBox(bHwnd, L"Ако заредиш записаната, ще загубиш тази игра !\n\nНаистина ли зареждаш записаната игра !", 
+            L"Зареждане !", MB_YESNO | MB_APPLMODAL | MB_ICONQUESTION) == IDNO)return;
+        
+    }
+
+    std::wifstream save(save_file);
+    float tempx = 0;
+    float tempy = 0;
+
+    InitGame();
+    
+    save >> score;
+    save >> seconds;
+    save >> game_speed;
+    for (int i = 0; i < 16; i++)
+    {
+        int letter = 0;
+        save >> letter;
+        current_player[i]=static_cast<wchar_t>(letter);
+    }
+    save >> set_name;
+    save >> hero_killed;
+    save >> win_game;
+    
+    save >> tempx;
+    save >> tempy;
+    save >> result;
+
+    Swipe(&Hero);
+
+    Hero = dll::iFactory(types::hero, tempx, tempy, dirs::stop);
+    Hero->lifes = result;
+    
+    save >> result;
+    if (result > 0)
+    {
+        for (int i = 0; i < result; i++)
+        {
+            int atype = -1;
+            int adir = -1;
+            int life = 0;
+            
+            save >> atype;
+            save >> tempx;
+            save >> tempy;
+            save >> adir;
+            save >> life;
+
+            vPirates.push_back(dll::iFactory(static_cast<types>(atype), tempx, tempy, static_cast<dirs>(adir)));
+            vPirates.back()->lifes = life;
+        }
+    }
+
+    save >> result;
+    save >> tempx;
+    save >> tempy;
+    
+    AllGameScreens[result].FinalIsland.x = tempx;
+    AllGameScreens[result].FinalIsland.y = tempy;
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].FinalIsland.ex = tempx;
+    AllGameScreens[result].FinalIsland.ey = tempy;
+
+
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island1.x = tempx;
+    AllGameScreens[result].Island1.y = tempy;
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island1.ex = tempx;
+    AllGameScreens[result].Island1.ey = tempy;
+
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island2.x = tempx;
+    AllGameScreens[result].Island2.y = tempy;
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island2.ex = tempx;
+    AllGameScreens[result].Island2.ey = tempy;
+
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island3.x = tempx;
+    AllGameScreens[result].Island3.y = tempy;
+    save >> tempx;
+    save >> tempy;
+    AllGameScreens[result].Island3.ex = tempx;
+    AllGameScreens[result].Island3.ey = tempy;
+    
+    ActiveScreen = AllGameScreens[result];
+
+    save.close();
+    
+    if (sound)mciSendString(L"play .\\res\\snd\\save.wav", NULL, NULL, NULL);
+    MessageBox(bHwnd, L"Играта е заредена !", L"Запис !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
 }
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
@@ -469,8 +656,14 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
 
     case WM_TIMER:
         if (pause)break;
-        seconds++;
+        if (!vShipyards.empty())
+        {
+            for (std::vector<SPARE>::iterator it = vShipyards.begin(); it < vShipyards.end(); it++)
+                it->life--;
+        }
+        seconds--;
         minutes = (int)(floor(seconds / 60));
+        if (seconds <= 0)GameOver();
         break;
 
     case WM_SETCURSOR:
@@ -593,6 +786,17 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
             SendMessage(hwnd, WM_CLOSE, NULL, NULL);
             break;
 
+        case mSave:
+            pause = true;
+            SaveGame();
+            pause = false;
+            break;
+
+        case mLoad:
+            pause = true;
+            LoadGame();
+            pause = false;
+            break;
 
         case mHoF:
             pause = true;
@@ -1014,6 +1218,13 @@ void CreateResources()
         ErrExit(eD2D);
     }
 
+    bmpShipyard = Load(L".\\res\\img\\shipyard.png", Draw);
+    if (!bmpShipyard)
+    {
+        LogError(L"Error loading bmpShipyard");
+        ErrExit(eD2D);
+    }
+
     for (int i = 0; i < 16; i++)
     {
         wchar_t name[100] = L".\\res\\img\\field\\";
@@ -1405,6 +1616,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
            }
         }
 
+        if (Hero && !vShipyards.empty())
+        {
+            for (std::vector<SPARE>::iterator it = vShipyards.begin(); it < vShipyards.end(); it++)
+            {
+                if (!(Hero->x >= it->Dims.ex || Hero->ex <= it->Dims.x || Hero->y >= it->Dims.ey || Hero->ey <= it->Dims.y))
+                {
+                    if (Hero->lifes < 200)
+                    {
+                        if (sound)mciSendString(L"play .\\res\\snd\\repair.wav", NULL, NULL, NULL);
+                        Hero->lifes = 200;
+                    }
+                    else
+                    {
+                        if (sound)mciSendString(L"play .\\res\\snd\\score.wav", NULL, NULL, NULL);
+                        score += 100;
+                    }
+                    vShipyards.erase(it);
+                    break;
+                }
+            }
+        }
+
         ////////////////////////////////
 
         //MY SHOTS ***********************
@@ -1648,7 +1881,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 if (!(Hero->x > it->Shot.Dims.ex || Hero->ex<it->Shot.Dims.x
                     || Hero->y>it->Shot.Dims.ey || Hero->ey < it->Shot.Dims.y))
                 {
-                    Hero->lifes -= 30;
+                    Hero->lifes -= 10 * game_speed;
                     if (Hero->lifes <= 0)
                     {
                         if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
@@ -1694,7 +1927,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
         if (middleText && TxtBrush)
         {
-            wchar_t status[150] = L"КАПИТАН: ";
+            wchar_t status[200] = L"КАПИТАН: ";
             wchar_t add[5] = L"\0";
             int size = 0;
 
@@ -1712,7 +1945,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
             wcscat_s(status, L", РЕЗУЛТАТ: ");
             wcscat_s(status, add);
 
-            for (int i = 0; i < 150; i++)
+            wcscat_s(status, L", остават: ");
+
+            wsprintf(add, L"%d", minutes);
+            wcscat_s(status, add);
+            wcscat_s(status, L" : ");
+            if (seconds - minutes * 60 < 0)
+                wcscat_s(status, L"0");
+            wsprintf(add, L"%d", seconds - minutes * 60);
+            wcscat_s(status, add);
+
+            for (int i = 0; i < 200; i++)
             {
                 if (status[i] != '\0')size++;
                 else break;
@@ -1809,6 +2052,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
                         if ((*pirate)->lifes <= 0)
                         {
+                            if (rand() % 5 == 0)vShipyards.push_back(SPARE(dll::ATOM((*pirate)->x, (*pirate)->y, 200.0f, 160.0f)));
                             score += game_speed * 20;
                             dll::ATOM anExplosion((*pirate)->x, (*pirate)->y, 200.0f, 227.0f);
                             if (sound)mciSendString(L"play .\\res\\snd\\explosion.wav", NULL, NULL, NULL);
@@ -2055,7 +2299,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
         }
         //////////////////////////////////////////////////
 
-        //EXPLOSIONS *************************************
+        //EXPLOSIONS & SHIPYARDS *************************************
 
         if (!vExplosions.empty())
         {
@@ -2071,6 +2315,20 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
                 }
                 Draw->DrawBitmap(bmpExplosion[it->frame], D2D1::RectF(it->Dims.x, it->Dims.y, it->Dims.ex, it->Dims.ey));
                 
+            }
+        }
+
+        if (!vShipyards.empty())
+        {
+            for (std::vector<SPARE>::iterator it = vShipyards.begin(); it < vShipyards.end(); it++)
+            {
+                if (it->life < 0)
+                {
+                    vShipyards.erase(it);
+                    break;
+                }
+                else
+                    Draw->DrawBitmap(bmpShipyard, D2D1::RectF(it->Dims.x, it->Dims.y, it->Dims.ex, it->Dims.ey));
             }
         }
 

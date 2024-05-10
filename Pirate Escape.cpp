@@ -567,6 +567,61 @@ void LoadGame()
     if (sound)mciSendString(L"play .\\res\\snd\\save.wav", NULL, NULL, NULL);
     MessageBox(bHwnd, L"Играта е заредена !", L"Запис !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
 }
+void ShowHelp()
+{
+    int result = 0;
+    CheckFile(hlp_file, &result);
+    if (result == FILE_NOT_EXIST)
+    {
+        if (sound)MessageBeep(MB_ICONASTERISK);
+        MessageBox(bHwnd, L"Грешка в помощния файл !\n\nСвържете се с разработчика !",
+            L"Липсва файл !", MB_OK | MB_APPLMODAL | MB_ICONINFORMATION);
+        return;
+    }
+
+    wchar_t hlp_text[1000] = L"\0";
+    std::wifstream help(hlp_file);
+    help >> result;
+
+    for (int i = 0; i < result; i++)
+    {
+        int aletter = 0;
+        help >> aletter;
+        hlp_text[i] = static_cast<wchar_t>(aletter);
+    }
+
+    help.close();
+    if (sound)mciSendString(L"play .\\res\\snd\\tada.wav", NULL, NULL, NULL);
+
+    Draw->BeginDraw();
+    Draw->Clear(D2D1::ColorF(D2D1::ColorF::DarkKhaki));
+    Draw->FillRectangle(D2D1::RectF(0, 0, scr_width, 50.0f), butBckg);
+    if (nrmText && InactBrush && TxtBrush && HgltBrush)
+    {
+        if (set_name)
+            Draw->DrawTextW(L"ВЪВЕДИ ИМЕТО СИ ТУКА", 21, nrmText, b1TxtRect, InactBrush);
+        else
+        {
+            if (!b1Hglt)
+                Draw->DrawTextW(L"ВЪВЕДИ ИМЕТО СИ ТУКА", 21, nrmText, b1TxtRect, TxtBrush);
+            else
+                Draw->DrawTextW(L"ВЪВЕДИ ИМЕТО СИ ТУКА", 21, nrmText, b1TxtRect, HgltBrush);
+        }
+
+        if (!b2Hglt)
+            Draw->DrawTextW(L"ЗВУЦИ ON / OFF", 15, nrmText, b2TxtRect, TxtBrush);
+        else
+            Draw->DrawTextW(L"ЗВУЦИ ON / OFF", 15, nrmText, b2TxtRect, HgltBrush);
+        if (!b3Hglt)
+            Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmText, b3TxtRect, TxtBrush);
+        else
+            Draw->DrawTextW(L"ПОМОЩ ЗА ИГРАТА", 16, nrmText, b3TxtRect, HgltBrush);
+    }
+    if (nrmText && HgltBrush)
+        Draw->DrawTextW(hlp_text, result, nrmText, D2D1::RectF(250.0f, 100.0f, scr_width, scr_height), HgltBrush);
+    Draw->EndDraw();
+
+}
 
 INT_PTR CALLBACK DlgProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -988,7 +1043,20 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT ReceivedMsg, WPARAM wParam, LPARAM lPar
             }
             if (LOWORD(lParam) >= b3Rect.left && LOWORD(lParam) <= b3Rect.right)
             {
-                mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+                if(sound)mciSendString(L"play .\\res\\snd\\select.wav", NULL, NULL, NULL);
+                if (!show_help)
+                {
+                    show_help = true;
+                    pause = true;
+                    ShowHelp();
+                    break;
+                }
+                else
+                {
+                    show_help = false;
+                    pause = false;
+                    break;
+                }
                 
                 break;
             }
@@ -1164,7 +1232,7 @@ void CreateResources()
 
     if (iWriteFactory)
         hr = iWriteFactory->CreateTextFormat(L"Gabriola", NULL, DWRITE_FONT_WEIGHT_EXTRA_BOLD, DWRITE_FONT_STYLE_OBLIQUE,
-            DWRITE_FONT_STRETCH_NORMAL, 36.0f, L"", &middleText);
+            DWRITE_FONT_STRETCH_CONDENSED, 36.0f, L"", &middleText);
     if (hr != S_OK)
     {
         LogError(L"Error creating D2D1 middle WriteTextFormat");
